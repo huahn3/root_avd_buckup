@@ -27,6 +27,32 @@ A Script to...
 - **所有已安装的 APK、软件账号登录态及应用本地数据**
 - **emulator 本体**（锁定版本，避免还原成无 Root 的环境）
 
+---
+
+### 🆕 全新机器从零恢复
+
+> **GitHub 仓库不含 AVD 数据。** 13G 归档含你的应用与账号数据，不适合入库，
+> 必须自己存 NAS（当前路径：`/Volumes/Configs/复制粘贴用/备份/自己项目备份/rootAVD/`）。
+> 克隆仓库只给你**工具链**；数据得你自己从 NAS 取。
+
+```bash
+# 1. 克隆仓库（拿到 Root 工具链 + 备份/还原脚本）
+git clone https://github.com/huahn3/root_avd_buckup.git
+cd root_avd_buckup
+
+# 2. 从 NAS 取回归档 —— 唯一需要你自己保管的东西
+cp "/Volumes/Configs/复制粘贴用/备份/自己项目备份/rootAVD/Pixel_8_full_backup_<时间戳>.tar.zst" .
+
+# 3. 一键还原（emulator / platform-tools / system image 全部来自归档，无需联网）
+./unpack_avd_full.sh ./Pixel_8_full_backup_<时间戳>.tar.zst
+
+# 4. 启动，已带 Root、LSPosed 和全部应用数据
+~/Library/Android/sdk/emulator/emulator -avd Pixel_8
+```
+
+还原后**不需要再跑 `rootAVD.sh`** —— Root 来自归档里已 patch 的 `ramdisk.img`。
+想从零 root 一个**全新** AVD 才用 `./rootAVD.sh`（命令见下文）。
+
 ### 1. 打包
 ```bash
 ./pack_avd_full.sh [目标目录]
@@ -42,8 +68,9 @@ A Script to...
 ./shrink_avd.sh
 ```
 
-> 完整说明、原理与踩坑记录见 [`一键备份avd和恢复指南.md`](一键备份avd和恢复指南.md)。
-> 依赖：`brew install zstd` 与 `brew install --cask android-commandlinetools`。
+> 完整说明、原理与 10 条踩坑记录见 [`一键备份avd和恢复指南.md`](一键备份avd和恢复指南.md)。
+> AI 接手请先读 [`AGENTS.md`](AGENTS.md)。
+> 依赖：`brew install zstd`（脚本会自动装）与 `brew install --cask android-commandlinetools`（可选，归档已自带组件）。
 
 ---
 
@@ -55,6 +82,22 @@ A Script to...
 ---
 
 ## Install Magisk
+
+> ### ⚠️ 本机环境提示（Apple Silicon）
+> 下面 upstream 的示例命令几乎全是 `x86_64` / `x86` 路径，**别照抄**。
+> 本机 AVD 是 `arm64-v8a`，实际命令为：
+>
+> ```bash
+> export ANDROID_HOME="$HOME/Library/Android/sdk"
+> export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+> ./rootAVD.sh system-images/android-34/google_apis_playstore/arm64-v8a/ramdisk.img
+> ```
+>
+> 第一个参数是 **`ramdisk.img` 文件**（不是目录），且路径**相对 `$ANDROID_HOME`**。
+> 跑 `./rootAVD.sh ListAllAVDs` 可拿到本机全部 AVD 的准确命令。
+> 脚本必须在 macOS 主机上运行 —— 它靠 `getprop` 探测是否身处模拟器 shell。
+> 详见 [`AGENTS.md`](AGENTS.md)。
+
 ### Download rootAVD via
 * [Click](https://gitlab.com/newbit/rootAVD/-/archive/master/rootAVD-master.zip)
 * `git clone https://gitlab.com/newbit/rootAVD.git`
