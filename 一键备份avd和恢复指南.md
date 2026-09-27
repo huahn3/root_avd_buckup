@@ -141,6 +141,10 @@ cp /Volumes/Configs/.../Pixel_8_full_backup_<时间戳>.tar.zst .
 7. **`lib/*/libbusybox.so` 被上游 `.gitignore` 忽略** —— 这是 root 功能的硬依赖，fresh clone 后 `rootAVD.sh` 必然 abort。本仓库已纳入版本控制。
 8. **`rootAVD.sh` 跑完会 `mv Magisk.zip Magisk.apk`**（`rename_copy_magisk()`，`MAGISKVERCHOOSEN` 为假时走 rename 分支），导致 `Magisk.zip` 从工作区消失、仓库变脏、二次运行失败。恢复方法：`git checkout Magisk.zip`。
 9. **GitHub 仓库不含 AVD 数据** —— 13G 归档含应用与账号数据，不适合入库，必须自己存 NAS。仓库只保证「Root 工具链 + 备份/还原/回收脚本」。
+10. **真机同时连着 adb 时，`adb shell` 会打到手机上** —— 若手机开了 WiFi 调试并连着（`adb devices` 出现 `192.168.x.x:5555`），不带 `-s` 的命令会命中真机而非模拟器，表现为「模拟器没有 root」「应用数量对不上」等假象。验证时务必：
+    ```bash
+    adb -s emulator-5554 shell 'su -c id'
+    ```
 
 ---
 
