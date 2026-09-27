@@ -4,8 +4,12 @@ Apps/*
 initramfs.img
 bzImage
 *.rc
-libbusybox*
-sbin*
+# 注意: 不要忽略 lib/*/libbusybox.so
+# rootAVD.sh 的 FindWorkingBusyBox() 直接遍历 lib/*/*busybox*,
+# 该目录缺失会导致 fresh clone 后 root 直接 abort_script 退出。
+# 这三个文件合计 6.3M, 是 root 功能的硬依赖, 必须随仓库分发。
+/libbusybox*
+sbin/*
 *.tar.zst
 busybox
 busybox-macos

@@ -22,8 +22,10 @@ if pgrep -f "emulator.*-avd ${AVD_NAME}" >/dev/null 2>&1; then
     exit 1
 fi
 
-command -v zstd >/dev/null 2>&1 || { echo "❌ 需要 zstd: brew install zstd"; exit 1; }
-command -v sdkmanager >/dev/null 2>&1 || { echo "❌ 需要 sdkmanager: brew install --cask android-commandlinetools"; exit 1; }
+command -v zstd >/dev/null 2>&1 || {
+    echo "[*] 未找到 zstd，正在通过 Homebrew 安装..."
+    brew install zstd >/dev/null 2>&1 || { echo "❌ zstd 安装失败，请手动执行: brew install zstd"; exit 1; }
+}
 
 rm -rf "$RESTORE_DIR"
 mkdir -p "$RESTORE_DIR"
@@ -41,7 +43,6 @@ if [ -f "$RESTORE_DIR/manifest.txt" ]; then
 fi
 
 mkdir -p "$SDK_DIR"
-yes | sdkmanager --sdk_root="$SDK_DIR" --licenses >/dev/null 2>&1 || true
 
 EMU_PKG=""
 if [ -d "$RESTORE_DIR/emulator" ]; then
@@ -51,7 +52,7 @@ if [ -d "$RESTORE_DIR/emulator" ]; then
     chmod +x "$SDK_DIR/emulator/emulator" 2>/dev/null || true
 else
     EMU_PKG="emulator"
-    if [ -n "$PINNED_EMU" ]; then
+    if [ -n "$PINNED_EMU" ] && command -v sdkmanager >/dev/null 2>&1; then
         if sdkmanager --sdk_root="$SDK_DIR" --install "emulator@$PINNED_EMU" >/dev/null 2>&1; then
             EMU_PKG="emulator@$PINNED_EMU"
             echo "    已锁定 emulator 版本 $PINNED_EMU"
@@ -61,15 +62,32 @@ else
     fi
 fi
 
-SDK_PKGS=("platform-tools" "platforms;android-34" "build-tools;34.0.0" "system-images;android-34;google_apis_playstore;arm64-v8a")
+SDK_PKGS=()
 [ -n "$EMU_PKG" ] && SDK_PKGS+=("$EMU_PKG")
+
 if [ -d "$RESTORE_DIR/platform-tools" ]; then
     mkdir -p "$SDK_DIR/platform-tools"
     cp -Rf "$RESTORE_DIR/platform-tools/." "$SDK_DIR/platform-tools/"
+    echo "    ✅ platform-tools (adb) 来自归档，无需下载"
 fi
 
-sdkmanager --sdk_root="$SDK_DIR" "${SDK_PKGS[@]}" \
-    >/dev/null 2>&1 || echo "    ⚠️  部分组件安装失败，若还原后模拟器无法启动请手动补装"
+if [ -f "$RESTORE_DIR/$SYSIMG_REL/system.img" ]; then
+    echo "    ✅ system image 来自归档，无需下载"
+else
+    SDK_PKGS+=("system-images;android-34;google_apis_playstore;arm64-v8a")
+    echo "    [*] system image 缺失，将从 sdkmanager 下载"
+fi
+
+if [ ${#SDK_PKGS[@]} -gt 0 ]; then
+    if command -v sdkmanager >/dev/null 2>&1; then
+        yes | sdkmanager --sdk_root="$SDK_DIR" --licenses >/dev/null 2>&1 || true
+        sdkmanager --sdk_root="$SDK_DIR" "${SDK_PKGS[@]}" >/dev/null 2>&1 \
+            || echo "    ⚠️  部分组件安装失败（运行模拟器不依赖它们，可稍后用 Android Studio 补装）"
+    else
+        echo "    ⚠️  未找到 sdkmanager 且需补装组件。请安装后重跑本脚本:"
+        echo "        brew install --cask android-commandlinetools"
+    fi
+fi
 
 echo "[3/5] 还原 AVD 数据 ..."
 mkdir -p "$AVD_BASE_DIR"

@@ -13,7 +13,54 @@
 | `unpack_avd_full.sh` | 从归档一键还原（含 SDK 自动补装） | 约 4 分钟 |
 | `shrink_avd.sh` | 回收 qcow2 膨胀，不动任何数据 | 约 6 分钟 |
 
-依赖：`zstd`（`brew install zstd`）、`sdkmanager`（`brew install --cask android-commandlinetools`）。
+依赖：`zstd`（脚本会自动 `brew install`）。`sdkmanager` 可选，归档已自带
+emulator / platform-tools / system image，**无网也能还原**。
+
+---
+
+## 全新机器从零恢复（重要）
+
+**GitHub 仓库只放脚本和 Root 工具链，不放 AVD 数据。**
+13G 的 `.tar.zst` 归档体积过大且含你的应用与账号数据，必须自己存 NAS。
+
+完整流程：
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/huahn3/root_avd_buckup.git
+cd root_avd_buckup
+
+# 2. 从 NAS 取回归档（唯一需要你自己保管的东西）
+cp /Volumes/Configs/.../Pixel_8_full_backup_<时间戳>.tar.zst .
+
+# 3. 一键还原
+./unpack_avd_full.sh ./Pixel_8_full_backup_<时间戳>.tar.zst
+
+# 4. 启动
+~/Library/Android/sdk/emulator/emulator -avd Pixel_8
+```
+
+还原后 AVD **已带 Root**，不需要再跑 `rootAVD.sh`。
+
+### 若想 Root 一个全新的 AVD
+
+```bash
+./rootAVD.sh
+```
+
+⚠️ `lib/*/libbusybox.so` 是 **root 的硬依赖**，必须随仓库分发。
+`rootAVD.sh` 的 `FindWorkingBusyBox()` 直接遍历 `lib/*/*busybox*`，
+目录缺失会打印 "Can not find any working Busybox Version" 并 `abort_script` 退出。
+上游仓库用 `.gitignore` 忽略了它们，导致 **fresh clone 后必然无法 root** —— 本仓库已修正。
+
+### 两条路径的区别
+
+| | 还原归档 | `rootAVD.sh` |
+|---|---|---|
+| 前提 | 需要 13G 归档 | 只需仓库 |
+| 结果 | 带你所有 App、登录态、模块 | 干净的 root 环境 |
+| Root 来源 | 归档里的 patched ramdisk | 现场 patch |
+| 适用 | 恢复现场 | 换新环境 / 变砖后重做 |
 
 ---
 
@@ -91,6 +138,9 @@
 4. **内部快照导致 COW 膨胀** —— `fastboot.forceFastBoot=yes` 时每次写入都写进快照，镜像只增不减。
 5. **`config.ini` 写死绝对路径** —— 换用户名或换机直接失效，还原时必须重写。
 6. **旧脚本 `pack_avd_for_nas.sh` 不含 `system.img`**，`unpack_avd_from_nas.sh` 缺 `mkdir -p` 且会静默失败后仍打印"✅ 完成"。**已废弃，请勿使用。**
+7. **`lib/*/libbusybox.so` 被上游 `.gitignore` 忽略** —— 这是 root 功能的硬依赖，fresh clone 后 `rootAVD.sh` 必然 abort。本仓库已纳入版本控制。
+8. **`rootAVD.sh` 跑完会 `mv Magisk.zip Magisk.apk`**（`rename_copy_magisk()`，`MAGISKVERCHOOSEN` 为假时走 rename 分支），导致 `Magisk.zip` 从工作区消失、仓库变脏、二次运行失败。恢复方法：`git checkout Magisk.zip`。
+9. **GitHub 仓库不含 AVD 数据** —— 13G 归档含应用与账号数据，不适合入库，必须自己存 NAS。仓库只保证「Root 工具链 + 备份/还原/回收脚本」。
 
 ---
 
