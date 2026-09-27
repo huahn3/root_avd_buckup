@@ -1,0 +1,6 @@
+*.sh text eol=lf
+# 备份归档与二进制产物
+*.tar.zst binary
+*.zip binary
+*.apk binary
+*.so binary

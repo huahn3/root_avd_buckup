@@ -1,0 +1,12 @@
+.DS_Store
+Apps/*
+!Apps/.gitkeep
+initramfs.img
+bzImage
+*.rc
+libbusybox*
+sbin*
+*.tar.zst
+busybox
+busybox-macos
+bugreport-*.zip
